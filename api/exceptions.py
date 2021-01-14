@@ -175,7 +175,7 @@ class ErrorsFormatter:
         return errors_list
 
 
-def spora_health_exception_handler(exc, context):
+def global_exception_handler(exc, context):
     logging.exception(exc)
     response = exception_handler(exc, context)
 
