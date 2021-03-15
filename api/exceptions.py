@@ -1,7 +1,9 @@
 import logging
 
+from django.utils.translation import ugettext as _t
 from django.core.exceptions import ValidationError
-from rest_framework import exceptions
+from rest_framework import exceptions, status
+from rest_framework.response import Response
 from rest_framework import exceptions as rest_exceptions
 from rest_framework.settings import api_settings
 from rest_framework.views import exception_handler
@@ -27,28 +29,6 @@ def get_error_message(exc):
         error_msg = str(exc)
 
     return error_msg
-
-
-class ApiErrorsMixin:
-    """
-    Mixin that transforms Django and Python exceptions into rest_framework ones.
-    without the mixin, they return 500 status code which is not desired.
-    """
-
-    expected_exceptions = {
-        ValueError: rest_exceptions.ValidationError,
-        ValidationError: rest_exceptions.ValidationError,
-        PermissionError: rest_exceptions.PermissionDenied,
-    }
-
-    def handle_exception(self, exc):
-        if isinstance(exc, tuple(self.expected_exceptions.keys())):
-            drf_exception_class = self.expected_exceptions[exc.__class__]
-            drf_exception = drf_exception_class(get_error_message(exc))
-
-            return super().handle_exception(drf_exception)
-
-        return super().handle_exception(exc)
 
 
 class ErrorsFormatter:
@@ -87,11 +67,28 @@ class ErrorsFormatter:
                 serializer_errors=self.exception.get_full_details()
             )
         else:
-            formatted_errors = self._get_response_json_from_error_message(
+            formatted_errors = self.get_response_json_from_error_message(
                 message=str(self.exception)
             )
 
         return formatted_errors
+
+    @classmethod
+    def get_response_json_from_error_message(
+        cls, *, message="", field=None, code="error"
+    ):
+        response_data = {cls.ERRORS: [{cls.MESSAGE: message, cls.CODE: code}]}
+
+        if field:
+            response_data[cls.ERRORS][cls.FIELD] = field
+
+        return response_data
+
+    def _unpack(self, obj):
+        if type(obj) is list and len(obj) == 1:
+            return obj[0]
+
+        return obj
 
     def _get_response_json_from_drf_errors(self, serializer_errors=None):
         if serializer_errors is None:
@@ -105,22 +102,6 @@ class ErrorsFormatter:
         response_data = {self.ERRORS: list_of_errors}
 
         return response_data
-
-    def _get_response_json_from_error_message(
-        self, *, message="", field=None, code="error"
-    ):
-        response_data = {self.ERRORS: [{self.MESSAGE: message, self.CODE: code}]}
-
-        if field:
-            response_data[self.ERRORS][self.FIELD] = field
-
-        return response_data
-
-    def _unpack(self, obj):
-        if type(obj) is list and len(obj) == 1:
-            return obj[0]
-
-        return obj
 
     def _get_list_of_errors(self, field_path="", errors_dict=None):
         """
@@ -176,15 +157,22 @@ class ErrorsFormatter:
 
 
 def global_exception_handler(exc, context):
-    logging.exception(exc)
+    """Global exception handler"""
     response = exception_handler(exc, context)
 
     # If unexpected error occurs (server error, etc.)
     if response is None:
-        return response
+        logging.exception(exc)
+        return Response(
+            data=ErrorsFormatter.get_response_json_from_error_message(
+                message=_t("Internal server error, please try again later")
+            ),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    logging.warning(exc)
 
     formatter = ErrorsFormatter(exc)
-
     response.data = formatter()
 
     return response

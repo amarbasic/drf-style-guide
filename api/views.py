@@ -2,7 +2,6 @@ from rest_framework import status
 from rest_framework.response import Response
 
 from .base import BaseAPI
-from .exceptions import ApiErrorsMixin
 from .mixins import (
     CreateAPIMixin,
     DestroyAPIMixin,
@@ -12,18 +11,14 @@ from .mixins import (
 )
 
 
-class GenericAPI(ApiErrorsMixin, BaseAPI):
-    pass
-
-
-class CreateAPI(CreateAPIMixin, GenericAPI):
+class CreateAPI(CreateAPIMixin, BaseAPI):
     def post(self, request, *args, **kwargs):
         response_data = self.create(request, *args, **kwargs)
         headers = self.get_success_headers(response_data)
         return Response(response_data, status=status.HTTP_201_CREATED, headers=headers)
 
 
-class ListAPI(ListAPIMixin, GenericAPI):
+class ListAPI(ListAPIMixin, BaseAPI):
     def get(self, request, *args, **kwargs):
         response_data, is_paginated = self.list(request, *args, **kwargs)
 
@@ -33,19 +28,19 @@ class ListAPI(ListAPIMixin, GenericAPI):
         return Response(response_data)
 
 
-class RetrieveAPI(RetrieveAPIMixin, GenericAPI):
+class RetrieveAPI(RetrieveAPIMixin, BaseAPI):
     def get(self, request, *args, **kwargs):
         response_data = self.retrieve(request, *args, **kwargs)
         return Response(response_data)
 
 
-class DestroyAPI(DestroyAPIMixin, GenericAPI):
+class DestroyAPI(DestroyAPIMixin, BaseAPI):
     def delete(self, request, *args, **kwargs):
         self.destroy(request, *args, **kwargs)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class UpdateAPI(UpdateAPIMixin, GenericAPI):
+class UpdateAPI(UpdateAPIMixin, BaseAPI):
     def put(self, request, *args, **kwargs):
         response_data = self.update(request, *args, **kwargs)
         return Response(response_data)
@@ -55,7 +50,7 @@ class UpdateAPI(UpdateAPIMixin, GenericAPI):
         return Response(response_data)
 
 
-class ListCreateAPI(ListAPIMixin, CreateAPIMixin, GenericAPI):
+class ListCreateAPI(ListAPIMixin, CreateAPIMixin, BaseAPI):
     def get(self, request, *args, **kwargs):
         response_data, is_paginated = self.list(request, *args, **kwargs)
 
@@ -70,7 +65,7 @@ class ListCreateAPI(ListAPIMixin, CreateAPIMixin, GenericAPI):
         return Response(response_data, status=status.HTTP_201_CREATED, headers=headers)
 
 
-class RetrieveUpdateAPI(RetrieveAPIMixin, UpdateAPIMixin, GenericAPI):
+class RetrieveUpdateAPI(RetrieveAPIMixin, UpdateAPIMixin, BaseAPI):
     def get(self, request, *args, **kwargs):
         response_data = self.retrieve(request, *args, **kwargs)
         return Response(response_data)
@@ -84,7 +79,7 @@ class RetrieveUpdateAPI(RetrieveAPIMixin, UpdateAPIMixin, GenericAPI):
         return Response(response_data)
 
 
-class RetrieveDestroyAPI(RetrieveAPIMixin, DestroyAPIMixin, GenericAPI):
+class RetrieveDestroyAPI(RetrieveAPIMixin, DestroyAPIMixin, BaseAPI):
     def get(self, request, *args, **kwargs):
         response_data = self.retrieve(request, *args, **kwargs)
         return Response(response_data)
@@ -95,7 +90,7 @@ class RetrieveDestroyAPI(RetrieveAPIMixin, DestroyAPIMixin, GenericAPI):
 
 
 class RetrieveUpdateDestroyAPI(
-    RetrieveAPIMixin, UpdateAPIMixin, DestroyAPIMixin, GenericAPI
+    RetrieveAPIMixin, UpdateAPIMixin, DestroyAPIMixin, BaseAPI
 ):
     def get(self, request, *args, **kwargs):
         response_data = self.retrieve(request, *args, **kwargs)
