@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.settings import api_settings
 from rest_framework.views import APIView
 
-from spora_health.common.serializers import BaseSerializer
+from .serializers import BaseSerializer
 
 USER_MODEL = get_user_model()
 
